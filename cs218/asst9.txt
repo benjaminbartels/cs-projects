@@ -1,0 +1,553 @@
+;  CS 218 - Assignment 9
+;  Provided Procedure Template.
+
+; --------------------------------------------------------------------
+;  Write three assembly language procedures and one function.
+
+;  Fucntion readHexNumber(), reads an ASCII hex number from
+;  the user and converts to an integer.
+;  Also returns a atstsus code.
+
+;  Procedure shellSort(), sorts the numbers into descending
+;  order (large to small).  Uses the shell sort algorithm (from asst #7).
+
+;  Procedure basicStats(), finds the minimum, median, and maximum, for a list
+;  of numbers.  Note, for an odd number of items, the median value
+;  is defined as the middle value.  For an even number of values,
+;  it is the integer average of the two middle values.
+
+;  Procedure advancedStats(), finds the sum and average for
+;  a list of numbers.
+
+
+; ----------
+
+section	.data
+
+; -----
+;  Define constants.
+
+LF		equ	10			; line feed
+CR		equ	13			; carridge return
+NULL		equ	0			; end of string
+
+TRUE		equ	1
+FALSE		equ	-1
+
+SUCCESS		equ	0			; Successful operation
+NOSUCCESS	equ	1			; Unsuccessful operation
+BADNUMBER	equ	2			; Invalid hex number entered
+OUTOFRANGE	equ	3			; hex number of out of range
+ENDOFINPUT	equ	4			; end of numbers (nothing enetered)
+
+STDIN		equ	0			; standard input
+STDOUT		equ	1			; standard output
+STDERR		equ	2			; standard error
+
+SYS_exit	equ	1			; system call code for terminate
+SYS_fork	equ	2			; system call code for fork
+SYS_read	equ	3			; system call code for read
+SYS_write	equ	4			; system call code for write
+SYS_open	equ	5			; system call code for file open
+SYS_close	equ	6			; system call code for file close
+
+MIN		equ	1
+MAX		equ	1000000
+
+; -----
+;  NO STATIC LOCAL VARIABLES
+;  LOCALS MUST BE DEFINED ON THE STACK!!
+
+
+; --------------------------------------------------------
+
+section	.text
+
+; --------------------------------------------------------
+;  Simple function to read a ASCII hex number, convert to
+;  integer and return.  Must return status code in EAX.
+
+;  Arguments passed:
+;	1) scaler, address - 8
+;  Returns:
+;   1) Status Code -> EAX
+
+global	readHexNumber
+readHexNumber:
+
+	push ebp
+	mov ebp, esp
+	sub esp, 48  	; 0 - 35 = buffer, 36 = current read byte, 40 = resultSum, 44 = intDigit, 48 = ddSixteen
+	push ebx
+	push ecx
+	push edx
+	push esi
+	push edi
+
+	mov esi, 0			;char count
+	lea edi, [ebp - 35]
+
+	; int local vars
+	mov dword [ebp - 40], 0		; resultSum
+	mov dword [ebp - 44], 0		; intDigit
+	mov dword [ebp - 48], 16 	; ddSixteen
+
+	readChar:
+
+		; initiate console read
+		mov eax, SYS_read
+		mov ebx, STDIN
+		lea ecx, [ebp - 36]
+		mov edx, 1
+		int 80h
+
+		; read into al
+		mov al, byte [ebp - 36]		
+
+		; check for line feed
+		cmp al, LF
+		je isLineFeed
+		jmp isNotLineFeed
+
+	isLineFeed:
+
+		cmp esi, 0
+		je endOfInput
+		jmp readDone
+		
+	isNotLineFeed:
+
+		; check for buffer overflow
+		cmp esi, 34
+		jge readChar
+
+		; move to buffer
+		mov byte [edi], al
+
+		; increment count and buffer position
+		inc esi
+		inc edi
+
+		jmp readChar
+
+	readDone:
+	
+		mov byte [edi], NULL
+
+		; init registers
+		mov ecx, esi		; copy counter to count register
+		mov ebx, 0
+		lea edi, [ebp - 35]
+
+	; start loop
+	hexToIntLoop:
+
+		; get char
+		mov eax, 0
+		mov al, byte [edi]
+
+		; convert char to int digit
+
+		; if less that 0 it is bad number
+		cmp al, "0"
+		jl badNumber
+
+		; "0"-"9" => -"0"
+		cmp al, "9"
+		jg not0Thru9
+		sub al, "0"
+		jmp done
+
+	not0Thru9:
+
+		; if less that A and not 0 - 9 it is bad number
+		cmp al, "A"
+		jl badNumber
+
+		; "A"-"F" => -"A"+10
+		cmp al,	"F"
+		jg notAThruF
+		sub al, "A"
+		add al, 10
+		jmp done
+
+	notAThruF:
+
+		; if less that a and not A - F it is bad number
+		cmp al, "a"
+		jl badNumber
+
+		; if greater that f and not A - F it is bad number
+		cmp al, "f"	
+		jg badNumber
+
+		; "a"-"f" => -"a"+10
+		sub al, "a"
+		add al, 10
+
+	done:
+
+		; convert int digit to DWord
+		cbw
+		cwde
+		mov dword [ebp - 44], eax
+
+		; rSum = rSum * 16
+		mov eax, dword [ebp - 40]
+		mul dword [ebp - 48]
+
+		; rSum = rSum + int digit
+		add eax, dword [ebp - 44]
+		mov dword [ebp - 40], eax
+
+		; inc buffer addr (+1)
+		inc edi
+
+		loop hexToIntLoop
+
+		; if less than 1, out of range
+		cmp eax, MIN
+		jl outOfRange
+
+		; if greater than 1000000, out of range
+		cmp eax, MAX
+		jg outOfRange
+
+		mov ebx, dword [ebp + 8]
+		mov dword [ebx], eax		 
+
+		mov eax, SUCCESS
+		jmp exit
+
+	badNumber:
+		mov eax, BADNUMBER
+		jmp exit
+
+	outOfRange:
+		mov eax, OUTOFRANGE
+		jmp exit
+
+	endOfInput:
+		mov eax, ENDOFINPUT
+		jmp exit
+
+	exit:
+
+		pop edi
+		pop esi
+		pop edx
+		pop ecx
+		pop ebx
+		mov esp, ebp	 	;restore ESP (clear local vars)
+		pop ebp
+		ret
+
+; --------------------------------------------------------
+;  Shell sort procedure.
+;	Note, modified to sort in ascending order
+
+; -----
+; Shell Sort
+
+;	h = 1;
+;       while ( (h*3+1) < a.length) {
+;	    h = 3 * h + 1;
+;	}
+
+;       while( h > 0 ) {
+;           for (i = h-1; i < a.length; i++) {
+;               tmp = a[i];
+;               j = i;
+;               for( j = i; (j >= h) && (a[j-h] > tmp); j -= h) {
+;                   a[j] = a[j-h];
+;               }
+;               a[j] = tmp;
+;           }
+;           h = h / 3;
+;       }
+
+; -----
+;  Call:
+;	call shellSort(list, len)
+
+;  Arguments Passed:
+;	1) list, addr - 8
+;	2) length, value - 12
+
+global	shellSort
+shellSort:
+
+	push ebp
+	mov ebp, esp
+	sub esp, 8	; h, dword "three"
+	push eax
+	push ebx
+	push ecx
+	push edx
+	push esi
+	push edi
+
+	; i 		-> esi
+	; j 		-> edi
+	; tmp 		-> ebx
+	; lst		-> ecx
+
+	mov ecx, dword [ebp+8]
+
+	; var h = 1;
+	mov dword [ebp-4], 1
+
+	mov dword [ebp-8], 3
+
+	; while ((h * 3 + 1) < length)
+	firstWhileLoop:
+	
+		; calc first while operand
+		mov eax, dword [ebp-4]
+		mul dword [ebp-8]
+		inc eax
+
+		; if (h * 3 + 1) >= length
+		cmp eax, dword [ebp+12] 		; eax = h * 3 + 1
+		jge firstWhileLoopDone
+
+		; else continue firstWhile
+		mov dword [ebp-4], eax
+		jmp firstWhileLoop
+
+	firstWhileLoopDone:
+
+	; while (h > 0)
+	secondWhileLoop:
+
+		; if h <= 0
+		cmp dword [ebp-4], 0
+		jle secondWhileLoopDone
+
+		; else continue secondWhile
+
+		; for (var i = h - 1; i < length; i++)
+
+		; outer for loop init statment
+		; i = h - 1
+		mov esi, dword [ebp-4]
+		dec esi
+
+		outerForLoop:
+
+			; outer for loop test statment
+			; i < length
+			; if i >= length
+			cmp esi, dword [ebp+12] 
+			jge outerForLoopDone
+
+			; else continue outer for loop
+
+			; var tmp = lst[i];
+			mov ebx, dword [ecx+esi*4]
+
+			; for (j = i; (j >= h) && (lst[j - h] > tmp); j = j - h)
+
+			; inner for loop init statment
+			; j = i
+			mov edi, esi
+
+			innerForLoop:
+
+				; inner for loop test statment
+				; (j >= h) && (lst[j - h] < tmp)
+				; if (j < h)
+				cmp edi, dword [ebp-4]
+				jl innerForLoopDone
+
+				; -OR-
+				
+				; if (lst[j - h] <= tmp)
+				mov eax, edi
+				sub eax, dword [ebp-4]
+				mov eax, dword [ecx+eax*4]
+				cmp eax, ebx
+				jle innerForLoopDone
+
+				; else continue inner for loop
+				
+				; lst[j] = lst[j - h];
+				mov dword [ecx+edi*4], eax 	; its already in eax				
+
+				; inner for loop increment statment
+				; j = j - h
+				sub edi, dword [ebp-4]		
+
+				jmp innerForLoop
+		
+			innerForLoopDone:
+
+			; lst[j] = tmp;	
+			mov dword [ecx+edi*4], ebx			
+
+			; outer for loop increment statment
+			; i++
+			inc esi
+
+			jmp outerForLoop 
+
+		outerForLoopDone:		
+
+		; h = h / 3;
+		mov eax, dword [ebp-4]
+		mov edx, 0
+		div dword [ebp-8]
+		mov dword [ebp-4], eax
+		jmp secondWhileLoop
+		
+	secondWhileLoopDone:
+
+	pop edi
+	pop esi
+	pop edx
+	pop ecx
+	pop ebx
+	pop eax
+	mov esp, ebp	 ;restore ESP (clear local vars)
+	pop ebp
+	ret
+
+; --------------------------------------------------------
+;  Find basic stats for list:
+;	minimum, median, maximum
+
+;   Note, for an odd number of items, the median value is defined as
+;   the middle value.  For an even number of values, it is the integer
+;   average of the two middle values.
+;   The median must be determined after the list is sorted.
+
+; -----
+;  Call:
+;	call basicStats(list, len, min, med, max)
+
+;  Arguments Passed:
+;	1) list, addr - 8
+;	2) length, value - 12
+;	3) minimum, addr - 16
+;	4) median, addr - 20
+;	5) maximum, addr - 24
+
+global basicStats
+basicStats:
+
+	push ebp
+	mov ebp, esp
+	push eax
+	push ebx
+	push ecx
+	push edx
+	push esi
+	push edi
+
+	; get min
+	mov ebx, dword [ebp + 8]
+	mov eax, dword [ebx]
+	mov edi, dword [ebp + 16]
+	mov dword [edi], eax
+
+	; get max
+	mov esi, dword [ebp + 12]
+	dec esi
+	mov eax, dword [ebx + esi * 4]
+	mov edi, dword [ebp + 24]
+	mov dword [edi], eax
+
+	; calculate median
+	mov esi, dword [ebp + 12]
+	shr esi, 1
+	mov eax, dword [ebx + esi * 4]
+	mov ecx, 1
+	and ecx, dword [ebp + 12]
+	cmp ecx, 1
+	je medianDone
+	dec esi
+	add eax, dword [ebx + esi * 4]
+	shr eax, 1
+
+	medianDone:
+
+		mov edi, dword [ebp + 20]
+		mov dword [edi], eax
+
+		pop edi
+		pop esi
+		pop edx
+		pop ecx
+		pop ebx
+		pop eax
+		pop ebp
+		ret
+
+; --------------------------------------------------------
+;  Find advanced stats for list:
+;	sum and average
+
+; -----
+;  Call:
+;	call advancedStats(list, len, sum, ave)
+
+;  Arguments Passed:
+;	1) list, addr - 8
+;	2) length, value - 12
+;	3) sum, addr - 16
+;	4) average, addr - 20
+
+global advancedStats
+advancedStats:
+
+	push ebp
+	mov ebp, esp
+	push eax
+	push ebx
+	push ecx
+	push edx
+	push esi
+	push edi
+
+	; init registers
+	; list
+	mov ebx, dword [ebp + 8] 
+	; sum
+	mov eax, 0
+	; index
+	mov esi, 0
+	; length
+	mov ecx, dword [ebp + 12] 
+
+	; ecx is off limits!
+        sumLoop:
+
+		; get next item in list
+		mov edi, dword [ebx + esi * 4]
+
+		; add to sum
+		add eax, edi
+
+		inc esi
+		loop sumLoop
+
+	mov edi, dword [ebp + 16]
+	mov dword [edi], eax
+
+	; calculate average
+	cdq
+	idiv dword esi
+
+	mov edi, dword [ebp + 20]
+	mov dword [edi], eax
+
+	pop edi
+	pop esi
+	pop edx
+	pop ecx
+	pop ebx
+	pop eax
+	pop ebp
+	ret
+
+; --------------------------------------------------------

@@ -1,0 +1,143 @@
+     1                                  ;  Must include:
+     2                                  ;	name
+     3                                  ;	assignmnet #
+     4                                  ;	section #
+     5                                  
+     6                                  ;   No name, asst, section -> no points!
+     7                                  
+     8                                  
+     9                                  ; ----------------------------------------------
+    10                                            
+    11                                  section	.data
+    12                                  
+    13                                  ; -----
+    14                                  ; Byte Variables
+    15                                  
+    16 00000000 11                      	num1	db	17
+    17 00000001 09                      	num2	db	9
+    18                                  
+    19 00000002 00                      	res1	db	0
+    20 00000003 00                      	res2	db	0
+    21 00000004 0000                    	res3	dw	0
+    22 00000006 00                      	res4	db	0
+    23 00000007 00                      	rem4	db	0
+    24                                  
+    25                                  ; -----
+    26                                  ; Word Variables
+    27                                  
+    28 00000008 A00F                    	num3	dw	4000
+    29 0000000A 0700                    	num4	dw	7
+    30                                  
+    31 0000000C 0000                    	res5	dw	0
+    32 0000000E 0000                    	res6	dw	0
+    33 00000010 00000000                	res7	dd	0
+    34 00000014 0000                    	res8	dw	0
+    35 00000016 0000                    	rem8	dw	0
+    36                                  
+    37                                  ; -----
+    38                                  ; Double-word Variables
+    39                                  
+    40 00000018 A1860100                	num5	dd	100001
+    41 0000001C A4060000                	num6	dd	1700
+    42                                  
+    43 00000020 00000000                	res9	dd	0
+    44 00000024 00000000                	res10	dd	0
+    45 00000028 0000000000000000        	res11	dq	0
+    46 00000030 00000000                	res12	dd	0
+    47 00000034 00000000                	rem12	dd	0
+    48                                  
+    49                                  
+    50                                  ; ----------------------------------------------
+    51                                  
+    52                                  
+    53                                  section	.text
+    54                                  global _start
+    55                                  _start:
+    56                                  
+    57                                  ; ----------
+    58                                  ; Byte variables examples
+    59                                  ;	res1 = num1 + num2
+    60                                  ;	res2 = num1 - num2
+    61                                  ;	res3 = num1 * num2
+    62                                  ;	res4 = num1 / num2
+    63                                  ;	rem4 = modulus(num1/num2)
+    64                                  
+    65 00000000 A0[00000000]            	mov	al, [num1]
+    66 00000005 0205[01000000]          	add	al, [num2]
+    67 0000000B A2[02000000]            	mov	[res1], al
+    68                                  
+    69 00000010 A0[00000000]            	mov	al, [num1]
+    70 00000015 2A05[01000000]          	sub	al, [num2]
+    71 0000001B A2[03000000]            	mov	[res2], al
+    72                                  
+    73 00000020 A0[00000000]            	mov	al, [num1]
+    74 00000025 F625[01000000]          	mul	byte [num2]
+    75 0000002B 66A3[04000000]          	mov	[res3], ax
+    76                                  
+    77 00000031 A0[00000000]            	mov	al, [num1]
+    78 00000036 6698                    	cbw
+    79 00000038 F635[01000000]          	div	byte [num2]
+    80 0000003E A2[06000000]            	mov	[res4], al
+    81 00000043 8825[07000000]          	mov	[rem4], ah
+    82                                  
+    83                                  ; ----------
+    84                                  ; Word variables examples
+    85                                  ;	res5 = num3 + num4
+    86                                  ;	res6 = num3 - num4
+    87                                  ;	res7 = num3 * num4
+    88                                  ;	res8 = num3 / num4
+    89                                  ;	rem8 = modulus(num3/num4)
+    90                                  
+    91 00000049 66A1[08000000]          	mov	ax, [num3]
+    92 0000004F 660305[0A000000]        	add	ax, [num4]
+    93 00000056 66A3[0C000000]          	mov	[res5], ax
+    94                                  
+    95 0000005C 66A1[08000000]          	mov	ax, [num3]
+    96 00000062 662B05[0A000000]        	sub	ax, [num4]
+    97 00000069 66A3[0E000000]          	mov	[res6], ax
+    98                                  
+    99 0000006F 66A1[08000000]          	mov	ax, [num3]
+   100 00000075 66F725[0A000000]        	mul	word [num4]
+   101 0000007C A3[10000000]            	mov	[res7], eax
+   102                                  
+   103 00000081 66A1[08000000]          	mov	ax, [num3]
+   104 00000087 6699                    	cwd
+   105 00000089 66F735[0A000000]        	div	word [num4]
+   106 00000090 66A3[14000000]          	mov	[res8], ax
+   107 00000096 668915[16000000]        	mov	[rem8], dx
+   108                                  
+   109                                  ; ----------
+   110                                  ; Double-word variables examples
+   111                                  ;	res9 = num5 + num6
+   112                                  ;	res10 = num5 - num6
+   113                                  ;	res11 = num5 * num6
+   114                                  ;	res12 = num5 / num6
+   115                                  ;	rem12 = modulus(num5/num6)
+   116                                  
+   117 0000009D A1[18000000]            	mov	eax, [num5]
+   118 000000A2 0305[1C000000]          	add	eax, [num6]
+   119 000000A8 A3[20000000]            	mov	[res9], eax
+   120                                  
+   121 000000AD A1[18000000]            	mov	eax, [num5]
+   122 000000B2 2B05[1C000000]          	sub	eax, [num6]
+   123 000000B8 A3[24000000]            	mov	[res10], eax
+   124                                  
+   125 000000BD A1[18000000]            	mov	eax, [num5]
+   126 000000C2 F725[1C000000]          	mul	dword [num6]
+   127 000000C8 A3[28000000]            	mov	[res11], eax
+   128 000000CD 8915[2C000000]          	mov	[res11+4], edx
+   129                                  
+   130 000000D3 A1[18000000]            	mov	eax, [num5]
+   131 000000D8 99                      	cdq
+   132 000000D9 F735[1C000000]          	div	dword [num6]
+   133 000000DF A3[30000000]            	mov	[res12], eax
+   134 000000E4 8915[34000000]          	mov	[rem12], edx
+   135                                  
+   136                                  ; ----------
+   137                                  ;	Done, terminate program.
+   138                                  
+   139                                  last:
+   140 000000EA B801000000              	mov	eax, 1		; The system call for exit (sys_exit)
+   141 000000EF BB00000000              	mov	ebx, 0		; Exit with return code of 0 (no error)
+   142 000000F4 CD80                    	int	80h
+   143                                  
